@@ -113,25 +113,35 @@ if st.session_state.current_app == "Dashboard":
     fig_line.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig_line, use_container_width=True)
 
-# --- MODULE: TERMINAL ---
-elif st.session_state.current_app == "Terminal (Nhập)":
-    st.header("⌨️ INPUT TERMINAL")
-    with st.container():
-        with st.form("input_v21"):
-            c1, c2 = st.columns(2)
-            d = c1.date_input("Ngày giao dịch", datetime.now())
-            t = c1.selectbox("Loại", ["Chi", "Thu"])
-            amt = c2.number_input("Giá trị (VNĐ)", min_value=0)
-            cat = c2.selectbox("Danh mục", ["Ăn uống", "Lương", "Di chuyển", "Mua sắm", "Đầu tư", "Khác"])
-            note = st.text_input("Nội dung chi tiết")
+# --- TRONG MODULE: TERMINAL (NHẬP) ---
+if st.form_submit_button("THỰC THI LỆNH"):
+    with st.status("Đang thiết lập liên kết lượng tử...", expanded=True) as status:
+        try:
+            # 1. Tải dữ liệu hiện tại
+            df_old = load_data()
             
-            if st.form_submit_button("THỰC THI LỆNH"):
-                with st.status("Đang mã hóa dữ liệu..."):
-                    df_old = load_data()
-                    new_r = pd.DataFrame([{"date":str(d), "type":t, "category":cat, "amount":amt, "note":note}])
-                    conn.update(spreadsheet=url, data=pd.concat([df_old, new_r]))
-                    st.success("✅ Giao dịch đã được đồng bộ vào Chuỗi Lượng Tử!")
-
+            # 2. Tạo dòng mới
+            new_r = pd.DataFrame([{
+                "date": str(d), 
+                "type": t, 
+                "category": cat, 
+                "amount": float(amt), 
+                "note": note
+            }])
+            
+            # 3. Kết hợp dữ liệu (Gộp cũ và mới)
+            # Chú ý: Dùng concat để nối dữ liệu
+            updated_df = pd.concat([df_old, new_r], ignore_index=True)
+            
+            # 4. Ghi đè toàn bộ lên Google Sheets (Phương thức chuẩn nhất hiện nay)
+            conn.create(spreadsheet=url, data=updated_df)
+            
+            status.update(label="✅ Đồng bộ hoàn tất!", state="complete", expanded=False)
+            st.toast("Giao dịch đã được ghi vào Lõi vĩnh cửu!", icon="🚀")
+            time.sleep(1)
+            st.rerun()
+        except Exception as e:
+            st.error(f"Lỗi hệ thống: {str(e)}")
 # --- MODULE: NEXUS (STATS) ---
 elif st.session_state.current_app == "Nexus (Thống kê)":
     st.header("📊 DATA NEXUS")
