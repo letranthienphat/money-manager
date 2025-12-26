@@ -4,132 +4,134 @@ import pandas as pd
 from datetime import datetime
 import plotly.express as px
 
-# --- CONFIG & OS STYLE ---
-st.set_page_config(page_title="Quantum OS v19", layout="wide", page_icon="🖥️")
+# --- 1. CONFIG & CÀI ĐẶT HỆ THỐNG ---
+st.set_page_config(page_title="Quantum OS v20", layout="wide", page_icon="⚛️")
 
-# CSS tạo giao diện Hệ điều hành có hình nền và giảm lóa
-quantum_os_style = """
+# Khởi tạo các biến hệ thống trong Session State
+if 'theme_color' not in st.session_state: st.session_state.theme_color = "#38bdf8"
+if 'bg_url' not in st.session_state: st.session_state.bg_url = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe"
+if 'current_app' not in st.session_state: st.session_state.current_app = "Desktop"
+
+# --- 2. MODERN GLASSMORPHISM CSS ---
+modern_css = f"""
 <style>
-    /* Hình nền Desktop Quantum */
-    .stApp {
-        background: linear-gradient(rgba(10, 10, 20, 0.8), rgba(10, 10, 20, 0.8)), 
-                    url("https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2070&auto=format&fit=crop");
-        background-size: cover;
-        color: #cfd8dc;
-        font-family: 'Segoe UI', Roboto, sans-serif;
-    }
-
-    /* Tắt thành phần mặc định */
-    header, footer {visibility: hidden;}
-
-    /* Style cho các Icon trên màn hình chính */
-    .os-icon {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border_radius: 15px;
-        padding: 20px;
-        text-align: center;
-        backdrop-filter: blur(10px);
-        transition: 0.3s;
-        cursor: pointer;
-        color: white;
-    }
-    .os-icon:hover {
-        background: rgba(0, 255, 255, 0.2);
-        border: 1px solid #00ffff;
-        transform: translateY(-5px);
-    }
-
-    /* Các cửa sổ ứng dụng khi mở */
-    .stTable, .stDataFrame, [data-testid="stVerticalBlock"] > div {
-        background: rgba(15, 23, 42, 0.9) !important;
-        border-radius: 12px;
-        border: 1px solid #1e293b;
-    }
+    header, footer {{visibility: hidden;}}
     
-    /* Chỉnh nút bấm cho đỡ lóa */
-    .stButton>button {
-        background-color: #1e293b !important;
-        color: #38bdf8 !important;
-        border: 1px solid #38bdf8 !important;
-        border-radius: 8px;
-        width: 100%;
-    }
+    .stApp {{
+        background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url("{st.session_state.bg_url}");
+        background-size: cover;
+        background-position: center;
+        color: white;
+    }}
+
+    /* Thẻ Card hiện đại */
+    .app-card {{
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 25px;
+        backdrop-filter: blur(15px);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        text-align: center;
+        transition: 0.3s;
+    }}
+
+    /* Nút bấm kiểu OS */
+    .stButton>button {{
+        background: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+        border-radius: 12px !important;
+        padding: 10px 20px !important;
+        font-weight: 500 !important;
+        transition: 0.3s !important;
+    }}
+    .stButton>button:hover {{
+        background: {st.session_state.theme_color}44 !important;
+        border: 1px solid {st.session_state.theme_color} !important;
+        transform: translateY(-2px);
+    }}
+
+    /* Thanh Dock phía dưới */
+    .dock-bar {{
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.5);
+        padding: 10px 20px;
+        border-radius: 20px;
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        gap: 15px;
+        z-index: 1000;
+    }}
 </style>
 """
-st.markdown(quantum_os_style, unsafe_allow_html=True)
+st.markdown(modern_css, unsafe_allow_html=True)
 
-# --- KHỞI TẠO HỆ THỐNG ---
-if 'current_app' not in st.session_state:
-    st.session_state.current_app = "Desktop"
-
-def open_app(app_name):
-    st.session_state.current_app = app_name
-
-# Kết nối Google Sheets (Vẫn dùng link cũ trong Secrets)
+# --- 3. LOGIC KẾT NỐI ---
 url = st.secrets["connections"]["gsheets"]["spreadsheet"]
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_data():
     return conn.read(spreadsheet=url, usecols=[0, 1, 2, 3, 4]).dropna(how='all')
 
-# --- MÀN HÌNH CHÍNH (DESKTOP) ---
+# --- 4. GIAO DIỆN DESKTOP ---
 if st.session_state.current_app == "Desktop":
-    st.title("⚡ QUANTUM OS")
-    st.write(f"Hôm nay: {datetime.now().strftime('%A, %d/%m/%Y')}")
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.title("🌌 Quantum Workspace")
+    st.write(f"Hệ thống ổn định • {datetime.now().strftime('%H:%M')}")
     
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    # Grid ứng dụng chính
     col1, col2, col3 = st.columns(3)
-    
     with col1:
-        if st.button("📝 INPUT TERMINAL\n(Nhập liệu)"):
-            open_app("Input")
-            st.rerun()
-            
+        st.markdown('<div class="app-card"><h3>📝</h3><p>Terminal</p></div>', unsafe_allow_html=True)
+        if st.button("Mở Nhập liệu"): st.session_state.current_app = "Input"; st.rerun()
     with col2:
-        if st.button("📊 DATA NEXUS\n(Thống kê)"):
-            open_app("Stats")
-            st.rerun()
-            
+        st.markdown('<div class="app-card"><h3>📊</h3><p>Analytics</p></div>', unsafe_allow_html=True)
+        if st.button("Mở Thống kê"): st.session_state.current_app = "Stats"; st.rerun()
     with col3:
-        if st.button("💾 RECOVERY PORTAL\n(QR Backup)"):
-            open_app("QR")
-            st.rerun()
+        st.markdown('<div class="app-card"><h3>⚙️</h3><p>Settings</p></div>', unsafe_allow_html=True)
+        if st.button("Cài đặt Hệ thống"): st.session_state.current_app = "Settings"; st.rerun()
 
-# --- CÁC CỬA SỔ ỨNG DỤNG ---
-if st.session_state.current_app != "Desktop":
-    if st.button("⬅️ QUAY LẠI DESKTOP"):
-        open_app("Desktop")
-        st.rerun()
-    st.markdown("---")
-
-    if st.session_state.current_app == "Input":
-        st.subheader("🖥️ Ứng dụng: NHẬP LIỆU")
+# --- 5. CỬA SỔ ỨNG DỤNG ---
+elif st.session_state.current_app == "Input":
+    st.subheader("📝 NHẬP LIỆU HỆ THỐNG")
+    with st.container(border=True):
         with st.form("input_form"):
-            date = st.date_input("Thời gian", datetime.now())
-            t_type = st.selectbox("Loại", ["Chi", "Thu"])
-            amt = st.number_input("Số tiền", min_value=0)
-            cat = st.selectbox("Danh mục", ["Ăn uống", "Di chuyển", "Lương", "Khác"])
+            col_a, col_b = st.columns(2)
+            d = col_a.date_input("Ngày", datetime.now())
+            t = col_a.selectbox("Loại", ["Chi", "Thu"])
+            amt = col_b.number_input("Số tiền", min_value=0)
+            cat = col_b.selectbox("Danh mục", ["Ăn uống", "Lương", "Giải trí", "Khác"])
             note = st.text_input("Ghi chú")
-            if st.form_submit_button("LƯU VÀO HỆ THỐNG"):
+            if st.form_submit_button("XÁC NHẬN GIAO DỊCH"):
                 df = get_data()
-                new_row = pd.DataFrame([{"date":str(date), "type":t_type, "category":cat, "amount":amt, "note":note}])
+                new_row = pd.DataFrame([{"date":str(d), "type":t, "category":cat, "amount":amt, "note":note}])
                 conn.update(spreadsheet=url, data=pd.concat([df, new_row]))
-                st.success("Đã đồng bộ vĩnh viễn!")
+                st.success("Dữ liệu đã được nạp!")
 
-    elif st.session_state.current_app == "Stats":
-        st.subheader("🖥️ Ứng dụng: THỐNG KÊ")
-        df = get_data()
-        if not df.empty:
-            total_chi = pd.to_numeric(df[df['type']=='Chi']['amount']).sum()
-            st.metric("TỔNG CHI TIÊU", f"{total_chi:,.0f} VNĐ")
-            fig = px.pie(df[df['type']=='Chi'], values='amount', names='category', hole=0.4)
-            st.plotly_chart(fig, use_container_width=True)
-            st.dataframe(df, use_container_width=True)
-        else:
-            st.write("Dữ liệu trống.")
+elif st.session_state.current_app == "Settings":
+    st.subheader("⚙️ CÀI ĐẶT HỆ THỐNG")
+    with st.container(border=True):
+        st.write("Tùy chỉnh giao diện")
+        new_bg = st.text_input("Link hình nền (URL)", st.session_state.bg_url)
+        new_color = st.color_picker("Màu chủ đạo (Accent Color)", st.session_state.theme_color)
+        
+        if st.button("ÁP DỤNG THAY ĐỔI"):
+            st.session_state.bg_url = new_bg
+            st.session_state.theme_color = new_color
+            st.rerun()
+        
+        st.markdown("---")
+        st.write("Thông tin phiên bản: Quantum OS v20.0 (Stable)")
 
-    elif st.session_state.current_app == "QR":
-        st.subheader("🖥️ Ứng dụng: SAO LƯU QR")
-        st.info("Chức năng mã hóa dữ liệu thành ma trận QR để lưu trữ offline.")
-        # Bạn có thể dán lại code QR ở V18 vào đây
+# --- 6. THANH DOCK ĐIỀU HƯỚNG ---
+if st.session_state.current_app != "Desktop":
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    if st.button("🏠 VỀ MÀN HÌNH CHÍNH"):
+        st.session_state.current_app = "Desktop"
+        st.rerun()
