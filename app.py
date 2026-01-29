@@ -1,135 +1,114 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
-from streamlit_option_menu import option_menu
 import pandas as pd
 from datetime import datetime
 import time
 
-# --- 1. CẤU HÌNH HỆ THỐNG SIÊU CẤP ---
-st.set_page_config(page_title="Titanium Ultimate", layout="wide", page_icon="⚡")
+# --- 1. CẤU HÌNH GIAO DIỆN HIỆN ĐẠI ---
+st.set_page_config(page_title="Titanium Simple", layout="wide", page_icon="📑")
 
-# --- 2. GIAO DIỆN LUXURY DARK (Tối ưu cảm ứng) ---
 st.markdown("""
 <style>
     header, footer {visibility: hidden;}
-    .stApp { background-color: #000000; color: #ffffff; }
-    
-    /* Thiết kế thẻ Card bóng bẩy */
-    .element-container img { border-radius: 20px; }
-    div[data-testid="stMetric"] {
-        background: linear-gradient(135deg, #111, #222);
-        border: 1px solid #333;
-        padding: 20px !important;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    .stApp { background-color: #0e1117; color: #ffffff; }
+    /* Card hiển thị số dư */
+    .balance-box {
+        background: #1c2128;
+        border-radius: 15px;
+        padding: 25px;
+        border: 1px solid #30363d;
+        text-align: center;
+        margin-bottom: 20px;
     }
-    
-    /* Nút bấm lớn cho điện thoại */
+    /* Nút bấm lớn dễ chạm */
     .stButton>button {
-        height: 3.5rem;
-        border-radius: 15px !important;
-        background: #222 !important;
-        color: #00d4ff !important;
-        border: 1px solid #00d4ff !important;
-        font-size: 18px !important;
-        font-weight: bold;
+        width: 100%;
+        border-radius: 12px !important;
+        height: 3em;
+        background-color: #238636 !important;
+        border: none !important;
+        font-weight: bold !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. LÕI KẾT NỐI (VĨNH CỬU) ---
+# --- 2. KẾT NỐI SHEET TRỰC TIẾP ---
 url = st.secrets["connections"]["gsheets"]["spreadsheet"]
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-def get_db():
-    try:
-        df = conn.read(spreadsheet=url, ttl="0s")
-        df = df.dropna(how='all')
-        if not df.empty:
-            df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0)
-        return df
-    except:
-        return pd.DataFrame(columns=['date', 'type', 'category', 'amount', 'note'])
+def get_data():
+    # Đọc trực tiếp, bỏ qua cache để dữ liệu luôn mới
+    df = conn.read(spreadsheet=url, ttl=0)
+    return df.dropna(how='all')
 
-# --- 4. THANH ĐIỀU HƯỚNG DOCK (Nâng cấp VIP) ---
-# Đưa menu ra giữa màn hình hoặc Sidebar tùy chỉnh để không bị "liệt"
-with st.sidebar:
-    selected = option_menu(
-        menu_title="QUANTUM CORE",
-        options=["TRANG CHỦ", "THU/CHI", "NHẬT KÝ", "HỆ THỐNG"],
-        icons=["house-fill", "plus-circle-fill", "journal-text", "cpu-fill"],
-        menu_icon="shimmer",
-        default_index=0,
-        styles={
-            "container": {"padding": "5!important", "background-color": "#000"},
-            "icon": {"color": "#00d4ff", "font-size": "20px"}, 
-            "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px", "color": "#fff"},
-            "nav-link-selected": {"background-color": "#00d4ff", "color": "#000"},
-        }
-    )
+# --- 3. GIAO DIỆN ĐIỀU HƯỚNG ---
+# Dùng thanh chọn đơn giản, không lỗi chuyển mục
+menu = st.radio("CHỌN CHỨC NĂNG:", ["🏠 TỔNG QUAN", "➕ NHẬP CHI TIÊU", "💰 NHẬP THU NHẬP", "📂 QUẢN LÝ"], horizontal=True)
 
-# --- 5. ĐIỀU PHỐI TÁC VỤ ---
+df = get_data()
 
-df = get_db()
+# Ép kiểu số để tính toán (Tránh lỗi cộng trừ)
+if not df.empty:
+    df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0)
 
-if selected == "TRANG CHỦ":
-    st.title("⚡ Dashboard")
-    
+# --- 4. XỬ LÝ CÁC MỤC ---
+
+if menu == "🏠 TỔNG QUAN":
+    st.markdown("<br>", unsafe_allow_html=True)
     thu = df[df['type'] == 'Thu']['amount'].sum()
     chi = df[df['type'] == 'Chi']['amount'].sum()
     balance = thu - chi
     
-    col1, col2 = st.columns(2)
-    col1.metric("SỐ DƯ TỔNG", f"{balance:,.0f} đ")
-    col2.metric("CHI TRONG THÁNG", f"{chi:,.0f} đ", delta_color="inverse")
+    st.markdown(f"""
+    <div class="balance-box">
+        <p style="color: #8b949e; margin: 0;">SỐ DƯ HIỆN TẠI</p>
+        <h1 style="color: #58a6ff; font-size: 3rem; margin: 10px 0;">{balance:,.0f} đ</h1>
+    </div>
+    """, unsafe_allow_html=True)
     
-    st.markdown("### Giao dịch mới nhất")
-    st.dataframe(df.tail(10).sort_index(ascending=False), use_container_width=True)
+    c1, c2 = st.columns(2)
+    c1.metric("Tổng Thu (+)", f"{thu:,.0f} đ")
+    c2.metric("Tổng Chi (-)", f"{chi:,.0f} đ", delta_color="inverse")
+    
+    st.write("### 🕒 Giao dịch gần nhất")
+    st.dataframe(df.tail(10), use_container_width=True, hide_index=True)
 
-elif selected == "THU/CHI":
-    st.title("💸 Nhập dữ liệu")
+elif menu == "➕ NHẬP CHI TIÊU" or menu == "💰 NHẬP THU NHẬP":
+    is_chi = "Chi" if "CHI" in menu else "Thu"
+    st.subheader(f"Ghi nhận khoản {is_chi}")
     
-    # Sử dụng Tabs hiện đại để chuyển đổi Thu/Chi cực nhanh
-    tab1, tab2 = st.tabs(["➖ KHOẢN CHI", "➕ KHOẢN THU"])
-    
-    with tab1:
-        with st.form("form_expense"):
-            amt = st.number_input("Số tiền", min_value=0, step=1000, key="e_amt")
-            cat = st.selectbox("Hạng mục", ["Ăn uống", "Đi lại", "Mua sắm", "Nhà cửa", "Khác"])
-            note = st.text_input("Ghi chú", key="e_note")
-            if st.form_submit_button("XÁC NHẬN CHI ➖", use_container_width=True):
-                if amt > 0:
-                    new_data = pd.DataFrame([{"date": str(datetime.now().date()), "type": "Chi", "category": cat, "amount": float(amt), "note": note}])
-                    updated_df = pd.concat([df, new_data], ignore_index=True)
+    with st.form("quick_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        amt = col1.number_input("Số tiền (đ)", min_value=0, step=1000)
+        cat = col2.selectbox("Hạng mục", ["Ăn uống", "Lương", "Mua sắm", "Di chuyển", "Giải trí", "Khác"])
+        note = st.text_input("Ghi chú/Nội dung")
+        
+        if st.form_submit_button(f"XÁC NHẬN {is_chi.upper()}"):
+            if amt > 0:
+                with st.spinner("Đang ghi vào Sheet..."):
+                    # Tạo dòng mới
+                    new_row = pd.DataFrame([{
+                        "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "type": is_chi,
+                        "category": cat,
+                        "amount": float(amt),
+                        "note": note
+                    }])
+                    # Nối vào dữ liệu cũ
+                    updated_df = pd.concat([df, new_row], ignore_index=True)
+                    # Ghi đè lại Sheet (Dùng update cho file đã có sẵn)
                     conn.update(spreadsheet=url, data=updated_df)
-                    st.toast("Đã ghi nhận khoản chi!", icon="🔥")
+                    st.success(f"Đã lưu khoản {is_chi} thành công!")
                     time.sleep(1)
                     st.rerun()
 
-    with tab2:
-        with st.form("form_income"):
-            amt = st.number_input("Số tiền", min_value=0, step=1000, key="i_amt")
-            cat = st.selectbox("Nguồn tiền", ["Lương", "Thưởng", "Kinh doanh", "Khác"])
-            note = st.text_input("Ghi chú", key="i_note")
-            if st.form_submit_button("XÁC NHẬN THU ➕", use_container_width=True):
-                if amt > 0:
-                    new_data = pd.DataFrame([{"date": str(datetime.now().date()), "type": "Thu", "category": cat, "amount": float(amt), "note": note}])
-                    updated_df = pd.concat([df, new_data], ignore_index=True)
-                    conn.update(spreadsheet=url, data=updated_df)
-                    st.toast("Đã cộng tiền vào tài khoản!", icon="💰")
-                    time.sleep(1)
-                    st.rerun()
-
-elif selected == "NHẬT KÝ":
-    st.title("📜 Lịch sử")
-    st.data_editor(df, use_container_width=True, num_rows="dynamic")
-    st.caption("Mẹo: Bạn có thể sửa trực tiếp vào bảng trên và nhấn Save (nếu cấu hình quyền cao hơn).")
-
-elif selected == "HỆ THỐNG":
-    st.title("⚙️ Cấu hình")
-    st.info(f"Đang kết nối tới: {url}")
-    if st.button("🗑️ RESET TOÀN BỘ DỮ LIỆU"):
-        empty_df = pd.DataFrame(columns=['date', 'type', 'category', 'amount', 'note'])
-        conn.update(spreadsheet=url, data=empty_df)
-        st.success("Hệ thống đã sạch bóng!")
-        st.rerun()
+elif menu == "📂 QUẢN LÝ":
+    st.subheader("Dữ liệu thô từ Sheet")
+    st.dataframe(df, use_container_width=True)
+    
+    if st.button("🗑️ XÓA DÒNG CUỐI CÙNG"):
+        if not df.empty:
+            updated_df = df.iloc[:-1]
+            conn.update(spreadsheet=url, data=updated_df)
+            st.warning("Đã xóa giao dịch gần nhất!")
+            st.rerun()
